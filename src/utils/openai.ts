@@ -1,34 +1,24 @@
-import OpenAI from "openai";
 import { defaultAnalogies } from "./defaultAnalogies";
 
-const client = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
-
 export async function getAnalogy(interest: string, concept: string) {
-  // Try API
   try {
-    const prompt = `Explain "${concept}" using an analogy from "${interest}". Short, intuitive.`;
-
-    const response = await client.responses.create({
-      model: "gpt-4o",
-      input: prompt,
+    const res = await fetch("/api/analogy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interest, concept }),
     });
 
-    return {
-      text: response.output_text,
-      source: "ai"
-    };
+    if (!res.ok) throw new Error("Server error");
+
+    const data = await res.json();
+    return { text: data.text, source: "ai" };
+    
   } catch (err) {
-    console.warn("API unavailable. Using fallback analogy.");
+    console.warn("Using fallback analogy:", err);
 
-    // fallback lookup:
-    const fallback = defaultAnalogies[interest]?.[concept];
+    const fallback = defaultAnalogies[interest]?.[concept] ?? 
+      "No analogy available for this combination yet.";
 
-    return {
-      text: fallback ?? "No analogy available for this pair yet.",
-      source: "fallback"
-    };
+    return { text: fallback, source: "fallback" };
   }
 }
